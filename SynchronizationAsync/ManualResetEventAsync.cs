@@ -54,10 +54,7 @@ namespace SynchronizationAsync
             Volatile.Write(ref _continuation, continuation);
         }
 
-        public bool GetResult()
-        {
-            return true;
-        }
+        public bool GetResult() => true;
 
         public bool IsCompleted { get; private set; } = false;
 
