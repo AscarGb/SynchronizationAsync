@@ -10,7 +10,7 @@ namespace SynchronizationAsync
 {
     public class ManualResetEventAsync
     {
-        ConcurrentQueue<ManualResetEventAwaiter> awaiteQueue
+        ConcurrentQueue<ManualResetEventAwaiter> awaitQueue
             = new ConcurrentQueue<ManualResetEventAwaiter>();
 
         public bool State { get; private set; }
@@ -27,7 +27,7 @@ namespace SynchronizationAsync
             if (State)
                 awaitable.Set();
             else
-                awaiteQueue.Enqueue(awaitable);
+                awaitQueue.Enqueue(awaitable);
 
             return awaitable;
         }
@@ -36,7 +36,7 @@ namespace SynchronizationAsync
         {
             State = true;
 
-            while (State && awaiteQueue.TryDequeue(out var awaitable))
+            while (State && awaitQueue.TryDequeue(out var awaitable))
                 awaitable.Set();
         }
 
