@@ -10,8 +10,8 @@ namespace SynchronizationAsync
 {
     public class ManualResetEventAsync
     {
-        ConcurrentQueue<ManualResetEventAwaitable> awaiteQueue
-            = new ConcurrentQueue<ManualResetEventAwaitable>();
+        ConcurrentQueue<ManualResetEventAwaiter> awaiteQueue
+            = new ConcurrentQueue<ManualResetEventAwaiter>();
 
         public bool State { get; private set; }
 
@@ -20,9 +20,9 @@ namespace SynchronizationAsync
             State = initialState;
         }
 
-        public ManualResetEventAwaitable WaitOneAsync()
+        public ManualResetEventAwaiter WaitOneAsync()
         {
-            var awaitable = new ManualResetEventAwaitable();
+            var awaitable = new ManualResetEventAwaiter();
 
             if (State)
                 awaitable.Set();
@@ -34,35 +34,15 @@ namespace SynchronizationAsync
 
         public void Set()
         {
-            lock (awaiteQueue)
-            {
-                while (awaiteQueue.TryDequeue(out var awaitable))
-                    awaitable.Set();
+            State = true;
 
-                State = true;
-            }
+            while (State && awaiteQueue.TryDequeue(out var awaitable))
+                awaitable.Set();
         }
 
         public void Reset()
         {
             State = false;
-        }
-    }
-
-    public class ManualResetEventAwaitable
-    {
-        ManualResetEventAwaiter _manualResetEventAwaiter;
-        public ManualResetEventAwaitable()
-        {
-            _manualResetEventAwaiter = new ManualResetEventAwaiter();
-        }
-        public ManualResetEventAwaiter GetAwaiter()
-        {
-            return _manualResetEventAwaiter;
-        }
-        public void Set()
-        {
-            _manualResetEventAwaiter.Set();
         }
     }
 
@@ -81,16 +61,16 @@ namespace SynchronizationAsync
 
         public bool IsCompleted { get; private set; } = false;
 
+        public ManualResetEventAwaiter GetAwaiter() => this;
+
         public void Set()
         {
             IsCompleted = true;
 
             Action continuation = Interlocked.Exchange(ref _continuation, null);
 
-            Task.Run(() =>
-            {
-                continuation?.Invoke();
-            });
+            if (continuation != null)
+                Task.Run(continuation);
         }
     }
 }
