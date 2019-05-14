@@ -19,13 +19,12 @@ namespace SynchronizationAsync.ConsoleApp
                 var k = i;
                 Task.Run(async () =>
                 {
-                    if (!mre.State)
-                        await mre.WaitOneAsync();
+                    await mre.WaitOneAsync();
                     Console.WriteLine($"Task id:{k}");
                 });
             }
 
-            await Task.Delay(new TimeSpan(0, 0, 5));
+            await Task.Delay(new TimeSpan(0, 0, 2));
 
             mre.Set();
 
@@ -36,9 +35,7 @@ namespace SynchronizationAsync.ConsoleApp
                 var k = i;
                 Task.Run(async () =>
                 {
-                    if (!mre.State)
-                        await mre.WaitOneAsync();
-
+                    await mre.WaitOneAsync();
                     Console.WriteLine($"Task id:{k}");
 
                 });

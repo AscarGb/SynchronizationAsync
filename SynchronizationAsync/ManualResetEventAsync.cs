@@ -10,61 +10,66 @@ namespace SynchronizationAsync
 {
     public class ManualResetEventAsync
     {
-        ConcurrentQueue<ManualResetEventAwaiter> awaitQueue
-            = new ConcurrentQueue<ManualResetEventAwaiter>();
-
-        public bool State { get; private set; }
+        ConcurrentQueue<ManualResetEventAwaiter> awaitQueue = null;
 
         public ManualResetEventAsync(bool initialState)
         {
-            State = initialState;
+            if (!initialState)
+                Reset();
         }
 
         public ManualResetEventAwaiter WaitOneAsync()
         {
             var awaitable = new ManualResetEventAwaiter();
 
-            if (State)
-                awaitable.Set();
+            var queue = Volatile.Read(ref awaitQueue);
+
+            if (queue == null)
+                awaitable.Continue();
             else
-                awaitQueue.Enqueue(awaitable);
+                queue.Enqueue(awaitable);
 
             return awaitable;
         }
 
         public void Set()
         {
-            State = true;
+            var queue = Interlocked.Exchange(ref awaitQueue, null);
 
-            while (State && awaitQueue.TryDequeue(out var awaitable))
-                awaitable.Set();
+            if (queue != null)
+                while (queue.TryDequeue(out var awaitable))
+                    awaitable.Continue();
         }
 
         public void Reset()
         {
-            State = false;
+            Interlocked.CompareExchange(
+                ref awaitQueue,
+                new ConcurrentQueue<ManualResetEventAwaiter>(),
+                null);
         }
     }
 
     public class ManualResetEventAwaiter : INotifyCompletion
     {
         Action _continuation;
+        bool _isCompleted = false;
         public void OnCompleted(Action continuation)
         {
             Volatile.Write(ref _continuation, continuation);
         }
 
-        public bool GetResult() => true;
+        public bool IsCompleted => _isCompleted;
 
-        public bool IsCompleted { get; private set; } = false;
+        public bool GetResult() => true;
 
         public ManualResetEventAwaiter GetAwaiter() => this;
 
-        public void Set()
+        public void Continue()
         {
-            IsCompleted = true;
+            Volatile.Write(ref _isCompleted, true);
 
-            Action continuation = Interlocked.Exchange(ref _continuation, null);
+            var continuation = Interlocked.Exchange(ref _continuation, null);
 
             if (continuation != null)
                 Task.Run(continuation);
