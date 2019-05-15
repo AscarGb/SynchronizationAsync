@@ -24,7 +24,7 @@ namespace SynchronizationAsync.ConsoleApp
                 });
             }
 
-            await Task.Delay(new TimeSpan(0, 0, 2));
+            await Task.Delay(new TimeSpan(0, 0, 1));
 
             mre.Set();
 

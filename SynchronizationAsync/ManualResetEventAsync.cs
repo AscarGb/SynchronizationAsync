@@ -27,7 +27,16 @@ namespace SynchronizationAsync
             if (queue == null)
                 awaitable.Continue();
             else
+            {
                 queue.Enqueue(awaitable);
+
+                //check queue
+                var upd_queue = Volatile.Read(ref awaitQueue);               
+
+                if (!ReferenceEquals(queue, upd_queue))
+                    awaitable.Continue();
+            }
+
 
             return awaitable;
         }
